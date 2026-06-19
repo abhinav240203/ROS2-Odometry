@@ -169,5 +169,3 @@ twist:
 * No sensor fusion (pure odometry)
 * Designed for ROS 2 simulation and visualization
 
-```
-
