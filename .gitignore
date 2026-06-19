@@ -1,0 +1,16 @@
+build/
+install/
+log/
+.vscode/
+__pycache__/
+*.pyc
+*.pyo
+
+src/*
+!src/robot_controller/
+!src/robot_controller/**
+!src/robot_description/
+!src/robot_description/**
+
+videos/*
+!videos/**
