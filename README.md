@@ -1,4 +1,3 @@
-````
 # ROS2 Differential Drive Odometry Controller
 
 This project implements a ROS 2 differential drive controller that performs:
