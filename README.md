@@ -1,113 +1,114 @@
-# ROS2 Differential Drive Odometry Controller
 
-This project implements a ROS 2 differential drive controller that performs:
-- velocity control from `/cmd_vel`
-- wheel velocity conversion
-- odometry estimation from wheel encoders
-- TF broadcasting (`odom → base_footprint`)
+# ROS2 Differential Drive Controller (Odometry + TF)
 
----
+This project implements a ROS 2-based differential drive robot controller that:
+- Converts velocity commands (`/cmd_vel`) into wheel commands
+- Computes odometry from wheel encoder feedback (`joint_states`)
+- Publishes robot pose as `nav_msgs/Odometry`
+- Broadcasts TF between `odom` and `base_footprint`
 
-# Differential Drive Kinematics
-
-## 1. Wheel Encoder Changes
-
-\[
-\Delta p_l = p_l(t) - p_l(t-1)
-\]
-
-\[
-\Delta p_r = p_r(t) - p_r(t-1)
-\]
+The implementation is based on a simple kinematic model of a differential drive robot.
 
 ---
 
-## 2. Wheel Angular Velocities
+## Features
 
-\[
-\omega_l = \frac{\Delta p_l}{\Delta t}, \quad \omega_r = \frac{\Delta p_r}{\Delta t}
-\]
-
----
-
-## 3. Robot Linear Velocity
-
-\[
-v = \frac{r}{2}\left(\omega_r + \omega_l\right)
-\]
+- Velocity command to wheel velocity conversion
+- Encoder-based odometry estimation
+- Real-time pose integration (x, y, theta)
+- TF broadcasting for visualization in RViz
+- Compatible with Gazebo simulation
 
 ---
 
-## 4. Robot Angular Velocity
+## ROS Interfaces
 
-\[
-\omega = \frac{r}{b}\left(\omega_r - \omega_l\right)
-\]
+### Subscribed Topics
 
-Where:
-- \( r \) = wheel radius  
-- \( b \) = wheel separation  
+- `/cmd_vel` (`geometry_msgs/TwistStamped`)
+  - Provides linear and angular velocity commands
 
----
-
-## 5. Discrete Motion (Odometry)
-
-\[
-\Delta s = \frac{r}{2}\left(\Delta p_r + \Delta p_l\right)
-\]
-
-\[
-\Delta \theta = \frac{r}{b}\left(\Delta p_r - \Delta p_l\right)
-\]
+- `joint_states` (`sensor_msgs/JointState`)
+  - Provides left and right wheel encoder positions
 
 ---
 
-## 6. Pose Update
+### Published Topics
 
-\[
-x_{t+1} = x_t + \Delta s \cos(\theta)
-\]
+- `robot_controller/odom` (`nav_msgs/Odometry`)
+  - Estimated robot pose and velocity
 
-\[
-y_{t+1} = y_t + \Delta s \sin(\theta)
-\]
-
-\[
-\theta_{t+1} = \theta_t + \Delta \theta
-\]
+- `simple_velocity_controller/commands` (`std_msgs/Float64MultiArray`)
+  - Wheel velocity commands
 
 ---
 
-# ROS Topics
+### TF Frames
 
-**Subscribed:**
-- `/cmd_vel` → `geometry_msgs/TwistStamped`
-- `joint_states` → `sensor_msgs/JointState`
-
-**Published:**
-- `robot_controller/odom` → `nav_msgs/Odometry`
-- `simple_velocity_controller/commands` → `std_msgs/Float64MultiArray`
+- `odom → base_footprint`
 
 ---
 
-# TF Tree
+## System Logic (Based on Code)
 
-\[
-odom \rightarrow base\_footprint
-\]
+### 1. Velocity to Wheel Conversion
+
+Incoming `/cmd_vel` is converted into left and right wheel velocities using the robot kinematic model.
 
 ---
 
-# Run Instructions
+### 2. Encoder Processing
 
-## Terminal 1
+From `joint_states`, the controller computes:
+- Change in wheel positions
+- Wheel angular velocities
+
+These values are used for motion estimation.
+
+---
+
+### 3. Odometry Estimation
+
+The robot pose is updated incrementally using wheel displacement:
+- Linear displacement from both wheels
+- Angular change from difference in wheel motion
+
+Pose is integrated over time to estimate:
+- Position (x, y)
+- Orientation (theta)
+
+---
+
+### 4. TF Broadcasting
+
+The computed pose is published as a TF transform:
+- Parent frame: `odom`
+- Child frame: `base_footprint`
+
+This allows visualization in RViz and integration with other ROS tools.
+
+---
+
+## Build Instructions
+
 ```bash
 colcon build
+source install/setup.bash
 ````
 
 ---
 
-## Terminal 2
+## Run Instructions
+
+### Terminal 1 – Build workspace
+
+```bash
+colcon build
+```
+
+---
+
+### Terminal 2 – Robot description / simulation
 
 ```bash
 source install/setup.bash
@@ -116,7 +117,7 @@ ros2 launch robot_description gazebo.launch.py
 
 ---
 
-## Terminal 3
+### Terminal 3 – Controller node
 
 ```bash
 source install/setup.bash
@@ -125,20 +126,20 @@ ros2 launch robot_controller controller.launch.py
 
 ---
 
-## Terminal 4
+### Terminal 4 – Visualization
 
 ```bash
 rviz2
 ```
 
-Set:
+In RViz:
 
-* Fixed Frame → `odom`
-* Add → TF
+* Set Fixed Frame → `odom`
+* Add → TF display
 
 ---
 
-## Terminal 5 (Correct cmd_vel)
+### Terminal 5 – Send velocity command
 
 ```bash
 ros2 topic pub /cmd_vel geometry_msgs/TwistStamped "
@@ -159,7 +160,14 @@ twist:
 "
 ```
 
+---
+
+## Notes
+
+* This is a differential drive odometry implementation based on wheel encoders
+* Assumes correct ordering of wheel joints in `JointState`
+* No sensor fusion (pure odometry)
+* Designed for ROS 2 simulation and visualization
+
 ```
 
----
-```
